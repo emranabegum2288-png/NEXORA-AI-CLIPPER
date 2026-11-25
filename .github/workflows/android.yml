@@ -1,47 +1,45 @@
-
 name: NEXORA Android Build
 
 on:
-  workflow_dispatch:
+workflow_dispatch:
 
 permissions:
-  contents: write
+contents: write
 
 jobs:
-  build:
-    runs-on: ubuntu-latest
+build:
+runs-on: ubuntu-latest
 
-    steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v4
+steps:  
+  - name: Checkout Repository  
+    uses: actions/checkout@v4  
 
-      - name: Setup Flutter
-        uses: subosito/flutter-action@v2
-        with:
-          channel: stable
+  - name: Setup Flutter  
+    uses: subosito/flutter-action@v2  
+    with:  
+      channel: stable  
 
-      - name: Create Flutter Project
-        run: |
-          if [ ! -f pubspec.yaml ]; then
-            flutter create --project-name nexora_ai_clipper --org com.nexora .
-          fi
+  - name: Create Flutter Project  
+    run: |  
+      if [ ! -f pubspec.yaml ]; then  
+        flutter create --project-name nexora_ai_clipper --org com.nexora .  
+      fi  
 
-      - name: Save Flutter Project
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add .
-          git diff --cached --quiet || git commit -m "Create Flutter Android project"
-          git push
+  - name: Save Flutter Project  
+    run: |  
+      git config user.name "github-actions[bot]"  
+      git config user.email "41898282+github-actions[bot]@users.noreply.github.com"  
+      git add .  
+      git diff --cached --quiet || git commit -m "Create Flutter Android project"  
+      git push  
 
-      - name: Build Android APK
-        run: |
-          flutter pub get
-          flutter build apk --release
+  - name: Build Android APK  
+    run: |  
+      flutter pub get  
+      flutter build apk --release  
 
-      - name: Upload APK
-        uses: actions/upload-artifact@v4
-        with:
-          name: NEXORA-AI-CLIPPER-APK
-          path: build/app/outputs/flutter-apk/app-release.apk
-          
+  - name: Upload APK  
+    uses: actions/upload-artifact@v4  
+    with:  
+      name: NEXORA-AI-CLIPPER-APK  
+      path: build/app/outputs/flutter-apk/app-release.apk
