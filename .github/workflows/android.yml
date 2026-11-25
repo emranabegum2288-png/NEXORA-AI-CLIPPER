@@ -1,11 +1,10 @@
 
 name: NEXORA Android Build
 
-'on':
-  workflow_dispatch:
+on: [workflow_dispatch]
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   build:
@@ -20,7 +19,7 @@ jobs:
         with:
           channel: stable
 
-      - name: Get Dependencies
+      - name: Install Dependencies
         run: flutter pub get
 
       - name: Build APK
