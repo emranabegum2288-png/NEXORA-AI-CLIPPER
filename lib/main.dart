@@ -1,6 +1,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:file_picker/file_picker.dart';
 
 void main() {
   runApp(const NexoraApp());
@@ -37,7 +38,7 @@ class _HomeScreenState extends State<HomeScreen> {
       TextEditingController();
 
   int selectedDuration = 1;
-  bool isGenerating = false;
+  PlatformFile? selectedVideo;
 
   final List<String> durations = [
     '15s',
@@ -56,19 +57,54 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
+  Future<void> pickVideo() async {
+    try {
+      final result = await FilePicker.platform.pickFiles(
+        type: FileType.video,
+        allowMultiple: false,
+      );
+
+      if (!mounted) return;
+
+      if (result != null && result.files.isNotEmpty) {
+        setState(() {
+          selectedVideo = result.files.first;
+          linkController.clear();
+        });
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Selected: ${selectedVideo!.name}',
+            ),
+          ),
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Could not select video. Please try again.'),
+        ),
+      );
+    }
+  }
+
   void generateShorts() {
     final link = linkController.text.trim();
 
-    if (link.isEmpty) {
+    if (selectedVideo == null && link.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Please paste a video link first!'),
+          content: Text('Please select a video or paste a link!'),
         ),
       );
       return;
     }
 
-    if (!link.contains('youtube.com') &&
+    if (selectedVideo == null &&
+        !link.contains('youtube.com') &&
         !link.contains('youtu.be')) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -78,12 +114,17 @@ class _HomeScreenState extends State<HomeScreen> {
       return;
     }
 
+    final source = selectedVideo != null
+        ? selectedVideo!.name
+        : 'YouTube link';
+
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(
-          'Selected duration: ${durations[selectedDuration]}. '
-          'AI video processing is not connected yet.',
+          '$source selected. Duration: ${durations[selectedDuration]}. '
+          'AI processing backend is not connected yet.',
         ),
+        duration: const Duration(seconds: 5),
       ),
     );
   }
@@ -193,9 +234,7 @@ class _HomeScreenState extends State<HomeScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-
               // HEADER
-
               Row(
                 children: [
                   Container(
@@ -219,8 +258,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   const SizedBox(width: 20),
                   const Expanded(
                     child: Column(
-                      crossAxisAlignment:
-                          CrossAxisAlignment.start,
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
                           'NEXORA',
@@ -253,7 +291,6 @@ class _HomeScreenState extends State<HomeScreen> {
               const SizedBox(height: 65),
 
               // MAIN TITLE
-
               const Text(
                 'Turn Long Videos',
                 style: TextStyle(
@@ -262,7 +299,6 @@ class _HomeScreenState extends State<HomeScreen> {
                   color: Color(0xFFEAE6F0),
                 ),
               ),
-
               const Text(
                 'Into Viral Shorts.',
                 style: TextStyle(
@@ -271,9 +307,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   color: Color(0xFFAA83FF),
                 ),
               ),
-
               const SizedBox(height: 22),
-
               const Text(
                 'Create vertical short videos with AI.',
                 style: TextStyle(
@@ -285,7 +319,6 @@ class _HomeScreenState extends State<HomeScreen> {
               const SizedBox(height: 48),
 
               // VIDEO INPUT CARD
-
               Container(
                 padding: const EdgeInsets.all(24),
                 decoration: BoxDecoration(
@@ -297,20 +330,18 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                 ),
                 child: Column(
-                  crossAxisAlignment:
-                      CrossAxisAlignment.start,
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-
                     const Row(
                       children: [
                         Icon(
-                          Icons.link,
+                          Icons.video_library_outlined,
                           color: Color(0xFFAA83FF),
                           size: 28,
                         ),
                         SizedBox(width: 14),
                         Text(
-                          'YouTube Video Link',
+                          'Choose Your Video',
                           style: TextStyle(
                             fontSize: 19,
                             fontWeight: FontWeight.bold,
@@ -319,24 +350,108 @@ class _HomeScreenState extends State<HomeScreen> {
                       ],
                     ),
 
-                    const SizedBox(height: 28),
+                    const SizedBox(height: 22),
+
+                    // PICK VIDEO BUTTON
+                    SizedBox(
+                      width: double.infinity,
+                      height: 62,
+                      child: OutlinedButton.icon(
+                        onPressed: pickVideo,
+                        icon: const Icon(
+                          Icons.upload_file,
+                          color: Color(0xFFAA83FF),
+                        ),
+                        label: const Text(
+                          'SELECT VIDEO FROM PHONE',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        style: OutlinedButton.styleFrom(
+                          side: const BorderSide(
+                            color: Color(0xFF814CEB),
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(18),
+                          ),
+                        ),
+                      ),
+                    ),
+
+                    if (selectedVideo != null) ...[
+                      const SizedBox(height: 15),
+                      Container(
+                        padding: const EdgeInsets.all(14),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF211B3B),
+                          borderRadius: BorderRadius.circular(15),
+                        ),
+                        child: Row(
+                          children: [
+                            const Icon(
+                              Icons.video_file,
+                              color: Color(0xFFAA83FF),
+                            ),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Text(
+                                selectedVideo!.name,
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                            IconButton(
+                              onPressed: () {
+                                setState(() {
+                                  selectedVideo = null;
+                                });
+                              },
+                              icon: const Icon(
+                                Icons.close,
+                                color: Colors.white70,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+
+                    const SizedBox(height: 25),
+
+                    const Center(
+                      child: Text(
+                        'OR PASTE A YOUTUBE LINK',
+                        style: TextStyle(
+                          color: Colors.white54,
+                          fontSize: 12,
+                          letterSpacing: 1.5,
+                        ),
+                      ),
+                    ),
+
+                    const SizedBox(height: 18),
 
                     // LINK FIELD
-
                     Container(
                       decoration: BoxDecoration(
                         color: const Color(0xFF090914),
-                        borderRadius:
-                            BorderRadius.circular(20),
+                        borderRadius: BorderRadius.circular(20),
                       ),
                       child: TextField(
                         controller: linkController,
-                        style: const TextStyle(
-                          color: Colors.white,
-                        ),
+                        onChanged: (value) {
+                          if (value.isNotEmpty &&
+                              selectedVideo != null) {
+                            setState(() {
+                              selectedVideo = null;
+                            });
+                          }
+                        },
+                        style: const TextStyle(color: Colors.white),
                         decoration: InputDecoration(
-                          hintText:
-                              'Paste your video URL here...',
+                          hintText: 'Paste your video URL here...',
                           hintStyle: const TextStyle(
                             color: Colors.white38,
                           ),
@@ -373,7 +488,6 @@ class _HomeScreenState extends State<HomeScreen> {
                     const SizedBox(height: 20),
 
                     // DURATION BUTTONS
-
                     GridView.builder(
                       shrinkWrap: true,
                       physics:
@@ -394,30 +508,23 @@ class _HomeScreenState extends State<HomeScreen> {
                     const SizedBox(height: 35),
 
                     // GENERATE BUTTON
-
                     SizedBox(
                       width: double.infinity,
                       height: 78,
                       child: ElevatedButton(
                         onPressed: generateShorts,
                         style: ElevatedButton.styleFrom(
-                          backgroundColor:
-                              const Color(0xFF814CEB),
+                          backgroundColor: const Color(0xFF814CEB),
                           foregroundColor: Colors.white,
                           elevation: 0,
                           shape: RoundedRectangleBorder(
-                            borderRadius:
-                                BorderRadius.circular(22),
+                            borderRadius: BorderRadius.circular(22),
                           ),
                         ),
                         child: const Row(
-                          mainAxisAlignment:
-                              MainAxisAlignment.center,
+                          mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            Icon(
-                              Icons.auto_awesome,
-                              size: 25,
-                            ),
+                            Icon(Icons.auto_awesome, size: 25),
                             SizedBox(width: 15),
                             Text(
                               'GENERATE SHORTS',
@@ -438,7 +545,6 @@ class _HomeScreenState extends State<HomeScreen> {
               const SizedBox(height: 50),
 
               // HOW IT WORKS
-
               const Text(
                 'HOW IT WORKS',
                 style: TextStyle(
@@ -453,7 +559,7 @@ class _HomeScreenState extends State<HomeScreen> {
               featureItem(
                 Icons.video_library_outlined,
                 'Add Your Video',
-                'Paste a video link to get started.',
+                'Select a video from your phone.',
               ),
 
               featureItem(
