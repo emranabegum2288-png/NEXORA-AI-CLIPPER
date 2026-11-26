@@ -21,13 +21,30 @@ const outputDir = path.join(__dirname, 'outputs');
 fs.mkdirSync(uploadDir, { recursive: true });
 fs.mkdirSync(outputDir, { recursive: true });
 
+const durations = {
+  '15s': 15,
+  '30s': 30,
+  '60s': 60,
+  '2 Min': 120,
+  '3 Min': 180,
+  '4 Min': 240,
+  '5 Min': 300,
+  '6 Min': 360,
+  '7 Min': 420,
+  '8 Min': 480,
+  '9 Min': 540,
+  '10 Min': 600
+};
+
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
     cb(null, uploadDir);
   },
   filename: (req, file, cb) => {
-    const safeName = Date.now() + '-' +
+    const safeName =
+      Date.now() + '-' +
       file.originalname.replace(/[^a-zA-Z0-9._-]/g, '_');
+
     cb(null, safeName);
   }
 });
@@ -50,7 +67,7 @@ app.get('/', (req, res) => {
   res.json({
     app: 'NEXORA AI CLIPPER',
     status: 'Backend is running',
-    version: '2.0.0'
+    version: '3.0.0'
   });
 });
 
@@ -69,21 +86,10 @@ app.post('/generate', upload.single('video'), (req, res) => {
     });
   }
 
-  const duration = req.body.duration;
-
-  const allowedDurations = {
-    '15s': 15,
-    '30s': 30,
-    '60s': 60,
-    '2 Min': 120,
-    '5 Min': 300,
-    '10 Min': 600
-  };
-
-  const seconds = allowedDurations[duration];
+  const seconds = durations[req.body.duration];
 
   if (!seconds) {
-    fs.unlinkSync(req.file.path);
+    fs.unlink(req.file.path, () => {});
 
     return res.status(400).json({
       success: false,
@@ -100,9 +106,12 @@ app.post('/generate', upload.single('video'), (req, res) => {
     .videoCodec('libx264')
     .audioCodec('aac')
     .outputOptions([
-      '-vf scale=720:1280:force_original_aspect_ratio=decrease,pad=720:1280:(ow-iw)/2:(oh-ih)/2',
-      '-preset ultrafast',
-      '-movflags +faststart'
+      '-vf',
+      'scale=720:1280:force_original_aspect_ratio=decrease,pad=720:1280:(ow-iw)/2:(oh-ih)/2',
+      '-preset',
+      'ultrafast',
+      '-movflags',
+      '+faststart'
     ])
     .on('end', () => {
       fs.unlink(req.file.path, () => {});
@@ -118,7 +127,7 @@ app.post('/generate', upload.single('video'), (req, res) => {
       fs.unlink(req.file.path, () => {});
       fs.unlink(outputPath, () => {});
 
-      console.error(error);
+      console.error('FFmpeg error:', error);
 
       if (!res.headersSent) {
         res.status(500).json({
@@ -137,7 +146,7 @@ app.get('/download/:filename', (req, res) => {
   if (!fs.existsSync(filePath)) {
     return res.status(404).json({
       success: false,
-      message: 'Video not found.'
+      message: 'Video not found. Please generate it again.'
     });
   }
 
@@ -146,6 +155,13 @@ app.get('/download/:filename', (req, res) => {
 
 app.use((error, req, res, next) => {
   console.error(error);
+
+  if (error.code === 'LIMIT_FILE_SIZE') {
+    return res.status(400).json({
+      success: false,
+      message: 'Video must be smaller than 50 MB.'
+    });
+  }
 
   res.status(400).json({
     success: false,
@@ -156,3 +172,4 @@ app.use((error, req, res, next) => {
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`NEXORA Backend running on port ${PORT}`);
 });
+    
